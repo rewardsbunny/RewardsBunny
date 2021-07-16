@@ -1,5 +1,8 @@
 <h1> Rewards Bunny Project </h1>
 
+<h4>Website: https://www.RewardsBunny.com</h4>
+<h4>Telegram: https://t.me/RewardsBunny</h4>
+<br>
 <h4>We do our best to test the contract to the best of our abilities. </h4>
 
 **Contract Test Points:**<br>
