@@ -354,9 +354,9 @@ contract RewardsBunny is Context, IBEP20, Ownable, ReentrancyGuard {
     uint8  public constant decimals = 18;
     
     // transfer fee
-    uint256 public _taxFeeTransfer       = 0;  
-    uint256 public _liquidityFeeTransfer = 250; 
-    uint256 public _marketingFeeTransfer = 250; 
+    uint256 public _taxFeeTransfer       = 0;   // 0% of every buy / sell is redistributed to holders
+    uint256 public _liquidityFeeTransfer = 0; // 3% of every buy / sell is kept for liquidity, 5% for BNB reward pool
+    uint256 public _marketingFeeTransfer = 0; // 8% of every buy / sell is sent to marketing wallet
     uint256 public _percentageOfLiquidityForBnbReward = 62;
 
     // buy fee
@@ -571,6 +571,12 @@ contract RewardsBunny is Context, IBEP20, Ownable, ReentrancyGuard {
     }
     function withdrawToken(address tokenAddress, uint256 amount) external onlyOwner {
         IBEP20(tokenAddress).transfer(owner(), amount);
+    }
+    function setBnbRewardEnabled(bool e) external onlyOwner {
+        _isBnbRewardEnabled = e;
+    }
+    function setRewardCycle(uint256 r) external onlyOwner {
+        _rewardCycle = r;
     }
 
     // TRANSFER
