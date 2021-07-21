@@ -113,7 +113,7 @@ abstract contract ReentrancyGuard {
     modifier nonReentrant() {
         // On the first call to nonReentrant, _notEntered will be true
         require(_status != _ENTERED, "ReentrancyGuard: reentrant call");
-
+        // R e w a r d s B u n n y 
         // Any calls to nonReentrant after this point will fail
         _status = _ENTERED;
 
@@ -421,7 +421,7 @@ contract RewardsBunny is Context, IBEP20, Ownable, ReentrancyGuard {
         _isExcluded[address(_uniswapV2Router)] = true;
         _excluded.push(_uniswapV2Pair);
         _excluded.push(address(_uniswapV2Router));
-        
+
         emit Transfer(address(0), cOwner, _tTotal);
     }
 
@@ -613,7 +613,7 @@ contract RewardsBunny is Context, IBEP20, Ownable, ReentrancyGuard {
             contractTokenBalance = _minTokenBalance;
             swapAndLiquify(contractTokenBalance);
         }
-        
+        // R e w a r d s B u n n y 
         bool takeFee = true;
         if (_isExcludedFromFee[from] || _isExcludedFromFee[to]) {
             takeFee = false;
@@ -807,7 +807,7 @@ contract RewardsBunny is Context, IBEP20, Ownable, ReentrancyGuard {
         updateClaimCycle(recipient, amount);
         
         _transferStandard(sender, recipient, amount);
-        
+        // R e w a r d s B u n n y 
         if (!takeFee || isBuy || isSell) {
             _taxFeeTransfer       = previousTaxFee;
             _liquidityFeeTransfer = previousLiquidityFee;
