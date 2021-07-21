@@ -354,20 +354,18 @@ contract RewardsBunny is Context, IBEP20, Ownable, ReentrancyGuard {
     uint8  public constant decimals = 18;
     
     // transfer fee
-    uint256 public _taxFeeTransfer       = 0;   // 0% of every buy / sell is redistributed to holders
-    uint256 public _liquidityFeeTransfer = 0; // 3% of every buy / sell is kept for liquidity, 5% for BNB reward pool
-    uint256 public _marketingFeeTransfer = 0; // 8% of every buy / sell is sent to marketing wallet
-    uint256 public _percentageOfLiquidityForBnbReward = 62;
+    uint256 public _taxFeeTransfer       = 0;   
+    uint256 public _liquidityFeeTransfer = 200; 
+    uint256 public _percentageOfLiquidityForBnbReward = 40;
+    uint256 public _percentageOfLiquidityForMarketing = 40;
 
     // buy fee
     uint256 public _taxFeeBuy       = 0; 
-    uint256 public _liquidityFeeBuy = 800;
-    uint256 public _marketingFeeBuy = 800; 
+    uint256 public _liquidityFeeBuy = 1600;
 
     // sell fee
     uint256 public _taxFeeSell       = 0; 
-    uint256 public _liquidityFeeSell = 2000;
-    uint256 public _marketingFeeSell = 1000; 
+    uint256 public _liquidityFeeSell = 3000;
 
     uint256 public _maxTxAmount      = _tTotal / 2;
     uint256 public _minTokenBalance  = _tTotal / 2000;
@@ -382,8 +380,10 @@ contract RewardsBunny is Context, IBEP20, Ownable, ReentrancyGuard {
     event SwapAndLiquifyEnabledUpdated(bool enabled);
     event SwapAndLiquify(
         uint256 tokensSwapped,
-        uint256 bnbReceived,
-        uint256 tokensIntoLiqudity
+        uint256 tokensForLiquidity,
+        uint256 bnbForLiquidity,
+        uint256 bnbForRewardPool,
+        uint256 bnbForMarketing
     );
 
     // bnb reward
@@ -472,16 +472,16 @@ contract RewardsBunny is Context, IBEP20, Ownable, ReentrancyGuard {
         require(tAmount <= _tTotal, "Amount must be less than supply");
 
         if (!deductTransferFee) {
-            (, uint256 tFee, uint256 tLiquidity, uint256 tMarketing) = _getTValues(tAmount);
+            (, uint256 tFee, uint256 tLiquidity) = _getTValues(tAmount);
             uint256 currentRate = _getRate();
-            (uint256 rAmount,,) = _getRValues(tAmount, tFee, tLiquidity, tMarketing, currentRate);
+            (uint256 rAmount,,) = _getRValues(tAmount, tFee, tLiquidity, currentRate);
 
             return rAmount;
 
         } else {
-            (, uint256 tFee, uint256 tLiquidity, uint256 tMarketing) = _getTValues(tAmount);
+            (, uint256 tFee, uint256 tLiquidity) = _getTValues(tAmount);
             uint256 currentRate = _getRate();
-            (, uint256 rTransferAmount,) = _getRValues(tAmount, tFee, tLiquidity, tMarketing, currentRate);
+            (, uint256 rTransferAmount,) = _getRValues(tAmount, tFee, tLiquidity, currentRate);
 
             return rTransferAmount;
         }
@@ -525,23 +525,23 @@ contract RewardsBunny is Context, IBEP20, Ownable, ReentrancyGuard {
     function setExcludedFromFee(address account, bool e) external onlyOwner {
         _isExcludedFromFee[account] = e;
     }
-    function setTransferFee(uint256 taxFee, uint256 liquidityFee, uint256 marketingFee) external onlyOwner {
+    function setTransferFee(uint256 taxFee, uint256 liquidityFee) external onlyOwner {
         _taxFeeTransfer       = taxFee;
         _liquidityFeeTransfer = liquidityFee;
-        _marketingFeeTransfer = marketingFee;
     }
-    function setBuyFee(uint256 taxFee, uint256 liquidityFee, uint256 marketingFee) external onlyOwner {
+    function setBuyFee(uint256 taxFee, uint256 liquidityFee) external onlyOwner {
         _taxFeeBuy       = taxFee;
         _liquidityFeeBuy = liquidityFee;
-        _marketingFeeBuy = marketingFee;
     }
-    function setSellFee(uint256 taxFee, uint256 liquidityFee, uint256 marketingFee) external onlyOwner {
+    function setSellFee(uint256 taxFee, uint256 liquidityFee) external onlyOwner {
         _taxFeeSell       = taxFee;
         _liquidityFeeSell = liquidityFee;
-        _marketingFeeSell = marketingFee;
     }
     function setPercentageOfLiquidityForBnbReward(uint256 percentageOfLiquidityForBnbReward) external onlyOwner {
         _percentageOfLiquidityForBnbReward = percentageOfLiquidityForBnbReward;
+    }
+    function setPercentageOfLiquidityForMarketing(uint256 percentageOfLiquidityForMarketing) external onlyOwner {
+        _percentageOfLiquidityForMarketing = percentageOfLiquidityForMarketing;
     }
     function setMaxTxPercent(uint256 maxTxPercent) external onlyOwner {
         _maxTxAmount = _tTotal * maxTxPercent / 100;
@@ -633,18 +633,40 @@ contract RewardsBunny is Context, IBEP20, Ownable, ReentrancyGuard {
         */
         uint256 initialBalance = address(this).balance;
 
+        bool shouldAddLiquidity = (_percentageOfLiquidityForBnbReward + _percentageOfLiquidityForMarketing) < 100;
+
         // swap tokens for BNB
-        swapTokensForBnb(half);
+        uint256 tokensSwapped = contractTokenBalance;
+        if (shouldAddLiquidity) {
+            tokensSwapped = half;
+        }
+        swapTokensForBnb(tokensSwapped);
 
         // this is the amount of BNB that we just swapped into
         uint256 newBalance = address(this).balance - initialBalance;
         uint256 bnbForRewardPool = newBalance * _percentageOfLiquidityForBnbReward / 100;
-        uint256 bnbForLiquidity = newBalance - bnbForRewardPool;
+        uint256 bnbForMarketing  = newBalance * _percentageOfLiquidityForMarketing / 100;
+        uint256 bnbForLiquidity  = newBalance - bnbForRewardPool - bnbForMarketing;
+
+        // send BNB to marketing
+        if (bnbForMarketing > 0) {
+            payable(_marketingWallet).transfer(bnbForMarketing);
+        }
 
         // add liquidity to uniswap
-        addLiquidity(otherHalf, bnbForLiquidity);
+        uint256 tokensForLiquidity;
+        if (bnbForLiquidity > 0 && shouldAddLiquidity) {
+            tokensForLiquidity = otherHalf;
+            addLiquidity(tokensForLiquidity, bnbForLiquidity);
+        }
         
-        emit SwapAndLiquify(half, bnbForLiquidity, otherHalf);
+        emit SwapAndLiquify(
+            tokensSwapped, 
+            tokensForLiquidity,
+            bnbForLiquidity, 
+            bnbForRewardPool,
+            bnbForMarketing
+        );
     }
     function swapBnbForTokens(uint256 amount) private {
         // generate the uniswap pair path of weth -> token
@@ -707,16 +729,13 @@ contract RewardsBunny is Context, IBEP20, Ownable, ReentrancyGuard {
 
         uint256 previousTaxFee       = _taxFeeTransfer;
         uint256 previousLiquidityFee = _liquidityFeeTransfer;
-        uint256 previousMarketingFee = _marketingFeeTransfer;
 
         _taxFeeTransfer       = 0;
         _liquidityFeeTransfer = 0;
-        _marketingFeeTransfer = 0;
         swapBnbForTokens(bnbReward);
 
         _taxFeeTransfer       = previousTaxFee;
         _liquidityFeeTransfer = previousLiquidityFee;
-        _marketingFeeTransfer = previousMarketingFee;
     }
     function claimBnbReward() isHuman nonReentrant public {
         require(_isBnbRewardEnabled, "Reward feature is currently paused");
@@ -767,7 +786,6 @@ contract RewardsBunny is Context, IBEP20, Ownable, ReentrancyGuard {
     function _tokenTransfer(address sender, address recipient, uint256 amount, bool takeFee) private {
         uint256 previousTaxFee       = _taxFeeTransfer;
         uint256 previousLiquidityFee = _liquidityFeeTransfer;
-        uint256 previousMarketingFee = _marketingFeeTransfer;
 
         bool isBuy  = sender == _uniswapV2Pair && recipient != address(_uniswapV2Router);
         bool isSell = recipient == _uniswapV2Pair;
@@ -775,17 +793,14 @@ contract RewardsBunny is Context, IBEP20, Ownable, ReentrancyGuard {
         if (!takeFee) {
             _taxFeeTransfer       = 0;
             _liquidityFeeTransfer = 0;
-            _marketingFeeTransfer = 0;
 
         } else if (isBuy) { 
             _taxFeeTransfer       = _taxFeeBuy;
             _liquidityFeeTransfer = _liquidityFeeBuy;
-            _marketingFeeTransfer = _marketingFeeBuy;
 
         } else if (isSell) { 
             _taxFeeTransfer       = _taxFeeSell;
             _liquidityFeeTransfer = _liquidityFeeSell;
-            _marketingFeeTransfer = _marketingFeeSell;
         }
 
         // update claim cycle
@@ -796,13 +811,12 @@ contract RewardsBunny is Context, IBEP20, Ownable, ReentrancyGuard {
         if (!takeFee || isBuy || isSell) {
             _taxFeeTransfer       = previousTaxFee;
             _liquidityFeeTransfer = previousLiquidityFee;
-            _marketingFeeTransfer = previousMarketingFee;
         }
     }
     function _transferStandard(address sender, address recipient, uint256 tAmount) private {
-        (uint256 tTransferAmount, uint256 tFee, uint256 tLiquidity, uint256 tMarketing) = _getTValues(tAmount);
+        (uint256 tTransferAmount, uint256 tFee, uint256 tLiquidity) = _getTValues(tAmount);
         uint256 currentRate = _getRate();
-        (uint256 rAmount, uint256 rTransferAmount, uint256 rFee) = _getRValues(tAmount, tFee, tLiquidity, tMarketing, currentRate);
+        (uint256 rAmount, uint256 rTransferAmount, uint256 rFee) = _getRValues(tAmount, tFee, tLiquidity, currentRate);
 
         _rOwned[sender] = _rOwned[sender] - rAmount;
         if (_isExcluded[sender]) {
@@ -814,8 +828,7 @@ contract RewardsBunny is Context, IBEP20, Ownable, ReentrancyGuard {
             _tOwned[recipient] = _tOwned[recipient] + tTransferAmount;
         }
 
-        takeTransactionFee(sender, address(this), tLiquidity, currentRate);
-        takeTransactionFee(sender, _marketingWallet, tMarketing, currentRate);
+        takeTransactionFee(address(this), tLiquidity, currentRate);
         reflectFee(rFee, tFee);
         emit Transfer(sender, recipient, tTransferAmount);
     }
@@ -823,23 +836,19 @@ contract RewardsBunny is Context, IBEP20, Ownable, ReentrancyGuard {
         _rTotal    = _rTotal - rFee;
         _tFeeTotal = _tFeeTotal + tFee;
     }
-    function _getTValues(uint256 tAmount) private view returns (uint256, uint256, uint256, uint256) {
+    function _getTValues(uint256 tAmount) private view returns (uint256, uint256, uint256) {
         uint256 tFee       = tAmount * _taxFeeTransfer / 10000;
         uint256 tLiquidity = tAmount * _liquidityFeeTransfer / 10000;
-        uint256 tMarketing = tAmount * _marketingFeeTransfer / 10000;
         uint256 tTransferAmount = tAmount - tFee;
         tTransferAmount = tTransferAmount - tLiquidity;
-        tTransferAmount = tTransferAmount - tMarketing;
-        return (tTransferAmount, tFee, tLiquidity, tMarketing);
+        return (tTransferAmount, tFee, tLiquidity);
     }
-    function _getRValues(uint256 tAmount, uint256 tFee, uint256 tLiquidity, uint256 tMarketing, uint256 currentRate) private pure returns (uint256, uint256, uint256) {
+    function _getRValues(uint256 tAmount, uint256 tFee, uint256 tLiquidity, uint256 currentRate) private pure returns (uint256, uint256, uint256) {
         uint256 rAmount     = tAmount * currentRate;
         uint256 rFee        = tFee * currentRate;
         uint256 rLiquidity  = tLiquidity * currentRate;
-        uint256 rMarketing  = tMarketing * currentRate;
         uint256 rTransferAmount = rAmount - rFee;
         rTransferAmount = rTransferAmount - rLiquidity;
-        rTransferAmount = rTransferAmount - rMarketing;
         return (rAmount, rTransferAmount, rFee);
     }
     function _getRate() private view returns(uint256) {
@@ -857,16 +866,13 @@ contract RewardsBunny is Context, IBEP20, Ownable, ReentrancyGuard {
         if (rSupply < _rTotal / _tTotal) return (_rTotal, _tTotal);
         return (rSupply, tSupply);
     }
-    function takeTransactionFee(address from, address to, uint256 tAmount, uint256 currentRate) private {
+    function takeTransactionFee(address to, uint256 tAmount, uint256 currentRate) private {
         if (tAmount <= 0) { return; }
 
         uint256 rAmount = tAmount * currentRate;
         _rOwned[to] = _rOwned[to] + rAmount;
         if (_isExcluded[to]) {
             _tOwned[to] = _tOwned[to] + tAmount;
-        }
-        if (to != address(this)) {
-            emit Transfer(from, to, tAmount);
         }
     }
 }
