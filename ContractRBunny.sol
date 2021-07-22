@@ -358,6 +358,9 @@ contract RewardsBunny is Context, IBEP20, Ownable, ReentrancyGuard {
     uint256 public _liquidityFeeTransfer = 200; 
     uint256 public _percentageOfLiquidityForBnbReward = 40;
     uint256 public _percentageOfLiquidityForMarketing = 40;
+    
+    // reinvest fee
+    uint256 public _liquidityFeeReinvest = 300;
 
     // buy fee
     uint256 public _taxFeeBuy       = 0; 
@@ -407,7 +410,7 @@ contract RewardsBunny is Context, IBEP20, Ownable, ReentrancyGuard {
         _rOwned[cOwner] = _rTotal;
         
         // Create a uniswap pair for this new token
-        IUniswapV2Router02 uniswapV2Router = IUniswapV2Router02(0x10ED43C718714eb63d5aA57B78B54704E256024E);
+        IUniswapV2Router02 uniswapV2Router = IUniswapV2Router02(0x9Ac64Cc6e4415144C455BD8E4837Fea55603e5c3);
         _uniswapV2Pair = IUniswapV2Factory(uniswapV2Router.factory()).createPair(address(this), uniswapV2Router.WETH());
         _uniswapV2Router = uniswapV2Router;
 
@@ -536,6 +539,9 @@ contract RewardsBunny is Context, IBEP20, Ownable, ReentrancyGuard {
     function setSellFee(uint256 taxFee, uint256 liquidityFee) external onlyOwner {
         _taxFeeSell       = taxFee;
         _liquidityFeeSell = liquidityFee;
+    }
+    function setReinvestFee(uint256 reinvestFee) external onlyOwner {
+        _liquidityFeeReinvest       = reinvestFee;
     }
     function setPercentageOfLiquidityForBnbReward(uint256 percentageOfLiquidityForBnbReward) external onlyOwner {
         _percentageOfLiquidityForBnbReward = percentageOfLiquidityForBnbReward;
@@ -728,14 +734,17 @@ contract RewardsBunny is Context, IBEP20, Ownable, ReentrancyGuard {
         emit bnbRewardClaimed(msg.sender, bnbReward, _nextAvailableClaimDate[msg.sender]);
 
         uint256 previousTaxFee       = _taxFeeTransfer;
-        uint256 previousLiquidityFee = _liquidityFeeTransfer;
+        uint256 previousLiquidityTransferFee = _liquidityFeeTransfer;
+        uint256 previousLiquidityBuyFee = _liquidityFeeBuy;
 
         _taxFeeTransfer       = 0;
         _liquidityFeeTransfer = 0;
+        _liquidityFeeBuy = _liquidityFeeReinvest;
         swapBnbForTokens(bnbReward);
 
         _taxFeeTransfer       = previousTaxFee;
-        _liquidityFeeTransfer = previousLiquidityFee;
+        _liquidityFeeTransfer = previousLiquidityTransferFee;
+        _liquidityFeeBuy = previousLiquidityBuyFee;
     }
     function claimBnbReward() isHuman nonReentrant public {
         require(_isBnbRewardEnabled, "Reward feature is currently paused");
