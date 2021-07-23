@@ -361,7 +361,7 @@ contract RewardsBunny is Context, IBEP20, Ownable, ReentrancyGuard {
     
     // reinvest fee
     uint256 public _taxFeeReinvest       = 0; 
-    uint256 public _liquidityFeeReinvest = 0;
+    uint256 public _liquidityFeeReinvest = 200;
     
     // buy fee
     uint256 public _taxFeeBuy       = 0; 
