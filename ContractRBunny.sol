@@ -360,8 +360,9 @@ contract RewardsBunny is Context, IBEP20, Ownable, ReentrancyGuard {
     uint256 public _percentageOfLiquidityForMarketing = 40;
     
     // reinvest fee
-    uint256 public _liquidityFeeReinvest = 300;
-
+    uint256 public _taxFeeReinvest       = 0; 
+    uint256 public _liquidityFeeReinvest = 0;
+    
     // buy fee
     uint256 public _taxFeeBuy       = 0; 
     uint256 public _liquidityFeeBuy = 1600;
@@ -540,8 +541,9 @@ contract RewardsBunny is Context, IBEP20, Ownable, ReentrancyGuard {
         _taxFeeSell       = taxFee;
         _liquidityFeeSell = liquidityFee;
     }
-    function setReinvestFee(uint256 reinvestFee) external onlyOwner {
-        _liquidityFeeReinvest       = reinvestFee;
+    function setReinvestFee(uint256 taxFeeReinvest, uint256 liquidityFeeReinvest) external onlyOwner {
+        _taxFeeReinvest       = taxFeeReinvest;
+        _liquidityFeeReinvest = liquidityFeeReinvest;
     }
     function setPercentageOfLiquidityForBnbReward(uint256 percentageOfLiquidityForBnbReward) external onlyOwner {
         _percentageOfLiquidityForBnbReward = percentageOfLiquidityForBnbReward;
@@ -736,15 +738,18 @@ contract RewardsBunny is Context, IBEP20, Ownable, ReentrancyGuard {
         uint256 previousTaxFee       = _taxFeeTransfer;
         uint256 previousLiquidityTransferFee = _liquidityFeeTransfer;
         uint256 previousLiquidityBuyFee = _liquidityFeeBuy;
+        uint256 previousBuyTaxFee = _taxFeeBuy;
 
         _taxFeeTransfer       = 0;
+        _taxFeeBuy            = _taxFeeReinvest;
         _liquidityFeeTransfer = 0;
-        _liquidityFeeBuy = _liquidityFeeReinvest;
+        _liquidityFeeBuy      = _liquidityFeeReinvest;
         swapBnbForTokens(bnbReward);
 
         _taxFeeTransfer       = previousTaxFee;
         _liquidityFeeTransfer = previousLiquidityTransferFee;
-        _liquidityFeeBuy = previousLiquidityBuyFee;
+        _liquidityFeeBuy      = previousLiquidityBuyFee;
+        _taxFeeBuy            = previousBuyTaxFee;
     }
     function claimBnbReward() isHuman nonReentrant public {
         require(_isBnbRewardEnabled, "Reward feature is currently paused");
