@@ -500,7 +500,7 @@ contract RewardsBunny is Context, IBEP20, Ownable, ReentrancyGuard {
         return _tFeeTotal;
     }
     function excludeFromReward(address account) external onlyOwner {
-        require(!_isExcluded[account], "Account is already excluded");
+        require(!_isExcluded[account], "Account is not excluded");
 
         if (_rOwned[account] > 0) {
             _tOwned[account] = tokenFromReflection(_rOwned[account]);
@@ -509,7 +509,7 @@ contract RewardsBunny is Context, IBEP20, Ownable, ReentrancyGuard {
         _excluded.push(account);
     }
     function includeInReward(address account) external onlyOwner {
-        require(_isExcluded[account], "Account is already excluded");
+        require(_isExcluded[account], "Account is not excluded");
 
         for (uint256 i = 0; i < _excluded.length; i++) {
             if (_excluded[i] == account) {
