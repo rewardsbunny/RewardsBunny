@@ -514,6 +514,8 @@ contract RewardsBunny is Context, IBEP20, Ownable, ReentrancyGuard {
         for (uint256 i = 0; i < _excluded.length; i++) {
             if (_excluded[i] == account) {
                 _excluded[i] = _excluded[_excluded.length - 1];
+                unit256 currentRate = getRate()
+                _rOwned[account] = _tOwned[account].mul(currentRate);
                 _tOwned[account] = 0;
                 _isExcluded[account] = false;
                 _excluded.pop();
