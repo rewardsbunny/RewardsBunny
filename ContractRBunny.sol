@@ -1,5 +1,5 @@
 /*
-The Contract is Owned By: https://rewardsbunny.com/
+The Contract is Owned By: https://www.RewardsBunny.com
 */
 
 // SPDX-License-Identifier: MIT
@@ -90,7 +90,7 @@ abstract contract ReentrancyGuard {
     modifier nonReentrant() {
         // On the first call to nonReentrant, _notEntered will be true
         require(_status != _ENTERED, "ReentrancyGuard: reentrant call");
-        // CUSTOM TEXT HERE
+        // R E W A R D S B U N N Y
         // Any calls to nonReentrant after this point will fail
         _status = _ENTERED;
 
@@ -309,7 +309,7 @@ interface IUniswapV2Router02 is IUniswapV2Router01 {
     ) external;
 }
 
-contract CUSTOM is Context, IBEP20, Ownable, ReentrancyGuard {
+contract RewardsBunny is Context, IBEP20, Ownable, ReentrancyGuard {
     mapping (address => uint256) private _rOwned;
     mapping (address => uint256) private _tOwned;
     mapping (address => bool)    private _isExcludedFromFee;
@@ -326,8 +326,8 @@ contract CUSTOM is Context, IBEP20, Ownable, ReentrancyGuard {
     uint256 private _rTotal = (MAX - (MAX % _tTotal));
     uint256 private _tFeeTotal;
 
-    string public constant name     = "CUSTOM";
-    string public constant symbol   = "CTM";
+    string public constant name     = "RewardsBunny";
+    string public constant symbol   = "RBunny";
     uint8  public constant decimals = 18;
     
     // transfer fee
@@ -354,7 +354,6 @@ contract CUSTOM is Context, IBEP20, Ownable, ReentrancyGuard {
     
     // Function EVENTS
     event excludeFromRewardTX(address TheFollowingAddressIsExcludedFromRewards);
-    event includeInRewardTX(address TheFollowingAddressIsIncludedInRewards);
     event setMarketingWalletTX(address TheFollowingAddressIsSetAsTheMarketingWallet);
     event setExcludedFromFeeTX(address Address, bool AddressIsExcludedFromFeesIsSetTo);
     event setTransferFeeTX(uint256 TaxFeeIsSetTo, uint256 LiquidityFeeIsSetTo);
@@ -429,6 +428,10 @@ contract CUSTOM is Context, IBEP20, Ownable, ReentrancyGuard {
 
     receive() external payable {}
 
+    function Lepus() public pure returns(string memory) {
+        return "011100100110010101110111011000010111001001100100011100110110001001110101011011100110111001111001";
+    }
+
     // BEP20
     function totalSupply() public pure override returns (uint256) {
         return _tTotal;
@@ -498,29 +501,15 @@ contract CUSTOM is Context, IBEP20, Ownable, ReentrancyGuard {
         return _tFeeTotal;
     }
     function excludeFromReward(address account) external onlyOwner {
-        require(!_isExcluded[account], "Account is not excluded");
+        require(!_isExcluded[account], "Account is already excluded");
 
         if (_rOwned[account] > 0) {
             _tOwned[account] = tokenFromReflection(_rOwned[account]);
         }
         _isExcluded[account] = true;
         _excluded.push(account);
-        emit excludeFromRewardTX(account);
-    }
-    function includeInReward(address account) external onlyOwner {
-        require(_isExcluded[account], "Account is not excluded");
 
-        for (uint256 i = 0; i < _excluded.length; i++) {
-            if (_excluded[i] == account) {
-                _excluded[i] = _excluded[_excluded.length - 1];
-                _tOwned[account] = 0;
-                _isExcluded[account] = false;
-                _excluded.pop();
-                break;
-            }
-        }
-        
-        emit includeInRewardTX(account);
+        emit excludeFromRewardTX(account);
     }
 
     // STATE
@@ -645,7 +634,7 @@ contract CUSTOM is Context, IBEP20, Ownable, ReentrancyGuard {
             contractTokenBalance = _minTokenBalance;
             swapAndLiquify(contractTokenBalance);
         }
-        // CUSTOM TEXT HERE
+        // R E W A R D S B U N N Y
         bool takeFee = true;
         if (_isExcludedFromFee[from] || _isExcludedFromFee[to]) {
             takeFee = false;
@@ -689,7 +678,9 @@ contract CUSTOM is Context, IBEP20, Ownable, ReentrancyGuard {
         uint256 tokensForLiquidity;
         if (bnbForLiquidity > 0 && shouldAddLiquidity) {
             tokensForLiquidity = otherHalf;
-            addLiquidity(tokensForLiquidity, bnbForLiquidity);
+            (uint256 tokenAdded, uint256 bnbAdded) = addLiquidity(tokensForLiquidity, bnbForLiquidity);
+            tokensForLiquidity = tokenAdded;
+            bnbForLiquidity    = bnbAdded;
         }
         
         emit SwapAndLiquify(
@@ -731,12 +722,12 @@ contract CUSTOM is Context, IBEP20, Ownable, ReentrancyGuard {
             block.timestamp
         );
     }
-    function addLiquidity(uint256 tokenAmount, uint256 bnbAmount) private {
+    function addLiquidity(uint256 tokenAmount, uint256 bnbAmount) private returns (uint256, uint256) {
         // approve token transfer to cover all possible scenarios
         _approve(address(this), address(_uniswapV2Router), tokenAmount);
 
         // add the liquidity
-        _uniswapV2Router.addLiquidityETH{value: bnbAmount}(
+        (uint amountToken, uint amountETH, ) = _uniswapV2Router.addLiquidityETH{value: bnbAmount}(
             address(this),
             tokenAmount,
             0, // slippage is unavoidable
@@ -744,6 +735,7 @@ contract CUSTOM is Context, IBEP20, Ownable, ReentrancyGuard {
             owner(),
             block.timestamp
         );
+        return (uint256(amountToken), uint256(amountETH));
     }
 
     // BNB REWARD
@@ -845,7 +837,7 @@ contract CUSTOM is Context, IBEP20, Ownable, ReentrancyGuard {
         updateClaimCycle(recipient, amount);
         
         _transferStandard(sender, recipient, amount);
-        // CUSTOM TEXT HERE
+        // R E W A R D S B U N N Y
         if (!takeFee || isBuy || isSell) {
             _taxFeeTransfer       = previousTaxFee;
             _liquidityFeeTransfer = previousLiquidityFee;
