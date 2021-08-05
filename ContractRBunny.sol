@@ -368,9 +368,9 @@ contract RewardsBunny is Context, IBEP20, Ownable, ReentrancyGuard {
     event setBnbRewardEnabledTX(bool BnbRewardEnabledIsSetTo);
     event setRewardCycleTX(uint256 RewardCycleIsSetTo);
     event setExcludedFromClaimTX(address Address, bool AddressIsExcludedFromClaimIsSetTo);
+    event withdrawTokenTX(address TokenAddress, uint256 AmountWithdrawnToTheAddress);
     event setPancakeSwapRouterTX(address TheFollowingAddressIsSetAsThePancakeSwapRouter);
     event setPancakeSwapPairTX(address TheFollowingAddressIsSetAsThePancakeSwapPair);
-    
     
     // auto liquidity
     bool public  _swapAndLiquifyEnabled = true;
@@ -579,9 +579,14 @@ contract RewardsBunny is Context, IBEP20, Ownable, ReentrancyGuard {
         _isExcludedFromClaim[account] = b;
         emit setExcludedFromClaimTX(account, b);
     }
+    
+    // Allows Owner to withdrawTokens from the contract address,
+    // When RewardsBunny becomes an utility token with 0% tax, withdrawToken function will allow us to remove the remaining token inside the contract address.
     function withdrawToken(address tokenAddress, uint256 amount) external onlyOwner {
         IBEP20(tokenAddress).transfer(owner(), amount);
+        emit withdrawTokenTX(tokenAddress, amount);
     }
+    
     function setBnbRewardEnabled(bool e) external onlyOwner {
         _isBnbRewardEnabled = e;
         emit setBnbRewardEnabledTX(e);
