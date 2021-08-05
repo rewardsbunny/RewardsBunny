@@ -52,33 +52,10 @@ contract Ownable is Context {
         _;
     }
 
-    function renounceOwnership() public virtual onlyOwner {
-        emit OwnershipTransferred(_owner, address(0));
-        _owner = address(0);
-    }
-
     function transferOwnership(address newOwner) public virtual onlyOwner {
         require(newOwner != address(0), "Ownable: new owner is the zero address");
         emit OwnershipTransferred(_owner, newOwner);
         _owner = newOwner;
-    }
-
-    function getUnlockTime() public view returns (uint256) {
-        return _lockTime;
-    }
-
-    function lock(uint256 time) public virtual onlyOwner {
-        _previousOwner = _owner;
-        _owner = address(0);
-        _lockTime = block.timestamp + time;
-        emit OwnershipTransferred(_owner, address(0));
-    }
-    
-    function unlock() public virtual {
-        require(_previousOwner == msg.sender, "You don't have permission to unlock");
-        require(block.timestamp > _lockTime , "Contract is still locked");
-        emit OwnershipTransferred(_owner, _previousOwner);
-        _owner = _previousOwner;
     }
 }
 
@@ -113,7 +90,7 @@ abstract contract ReentrancyGuard {
     modifier nonReentrant() {
         // On the first call to nonReentrant, _notEntered will be true
         require(_status != _ENTERED, "ReentrancyGuard: reentrant call");
-        // R e w a r d s B u n n y 
+        // CUSTOM TEXT HERE
         // Any calls to nonReentrant after this point will fail
         _status = _ENTERED;
 
@@ -332,7 +309,7 @@ interface IUniswapV2Router02 is IUniswapV2Router01 {
     ) external;
 }
 
-contract RewardsBunny is Context, IBEP20, Ownable, ReentrancyGuard {
+contract CUSTOM is Context, IBEP20, Ownable, ReentrancyGuard {
     mapping (address => uint256) private _rOwned;
     mapping (address => uint256) private _tOwned;
     mapping (address => bool)    private _isExcludedFromFee;
@@ -345,12 +322,12 @@ contract RewardsBunny is Context, IBEP20, Ownable, ReentrancyGuard {
     address public _marketingWallet;
    
     uint256 private constant MAX = ~uint256(0);
-    uint256 private _tTotal = 1000000000 * 10**18;
+    uint256 private constant _tTotal = 1000000000 * 10**18;
     uint256 private _rTotal = (MAX - (MAX % _tTotal));
     uint256 private _tFeeTotal;
 
-    string public constant name     = "RewardsBunny";
-    string public constant symbol   = "RBunny";
+    string public constant name     = "CUSTOM";
+    string public constant symbol   = "CTM";
     uint8  public constant decimals = 18;
     
     // transfer fee
@@ -374,6 +351,27 @@ contract RewardsBunny is Context, IBEP20, Ownable, ReentrancyGuard {
     uint256 public _maxTxAmount      = _tTotal / 2;
     uint256 public _minTokenBalance  = _tTotal / 2000;
     uint256 public _balanceThreshold = _tTotal / 3500;
+    
+    // Function EVENTS
+    event excludeFromRewardTX(address TheFollowingAddressIsExcludedFromRewards);
+    event includeInRewardTX(address TheFollowingAddressIsIncludedInRewards);
+    event setMarketingWalletTX(address TheFollowingAddressIsSetAsTheMarketingWallet);
+    event setExcludedFromFeeTX(address Address, bool AddressIsExcludedFromFeesIsSetTo);
+    event setTransferFeeTX(uint256 TaxFeeIsSetTo, uint256 LiquidityFeeIsSetTo);
+    event setBuyFeeTX(uint256 TaxFeeIsSetTo, uint256 LiquidityFeeIsSetTo);
+    event setSellFeeTX(uint256 TaxFeeIsSetTo, uint256 LiquidityFeeIsSetTo);
+    event setReinvestFeeTX(uint256 TaxFeeReinvestIsSetTo, uint256 LiquidityFeeReinvestIsSetTo);
+    event setPercentageOfLiquidityForBnbRewardTX(uint256 PercentageOfLiquidityForBnbRewardIsSetTo);
+    event setPercentageOfLiquidityForMarketingTX(uint256 PercentageOfLiquidityForMarketingIsSetTo);
+    event setMaxTxPercentTX(uint256 MaxTxPercentIsSetTo);
+    event setMinTokenBalanceTX(uint256 MinTokenBalanceIsSetTo);
+    event setBalanceThresholdTX(uint256 BalanceThresholdIsSetTo);
+    event setBnbRewardEnabledTX(bool BnbRewardEnabledIsSetTo);
+    event setRewardCycleTX(uint256 RewardCycleIsSetTo);
+    event setExcludedFromClaimTX(address Address, bool AddressIsExcludedFromClaimIsSetTo);
+    event setPancakeSwapRouterTX(address TheFollowingAddressIsSetAsThePancakeSwapRouter);
+    event setPancakeSwapPairTX(address TheFollowingAddressIsSetAsThePancakeSwapPair);
+    
     
     // auto liquidity
     bool public  _swapAndLiquifyEnabled = true;
@@ -432,7 +430,7 @@ contract RewardsBunny is Context, IBEP20, Ownable, ReentrancyGuard {
     receive() external payable {}
 
     // BEP20
-    function totalSupply() public view override returns (uint256) {
+    function totalSupply() public pure override returns (uint256) {
         return _tTotal;
     }
     function balanceOf(address account) public view override returns (uint256) {
@@ -500,16 +498,17 @@ contract RewardsBunny is Context, IBEP20, Ownable, ReentrancyGuard {
         return _tFeeTotal;
     }
     function excludeFromReward(address account) external onlyOwner {
-        require(!_isExcluded[account], "Account is already excluded");
+        require(!_isExcluded[account], "Account is not excluded");
 
         if (_rOwned[account] > 0) {
             _tOwned[account] = tokenFromReflection(_rOwned[account]);
         }
         _isExcluded[account] = true;
         _excluded.push(account);
+        emit excludeFromRewardTX(account);
     }
     function includeInReward(address account) external onlyOwner {
-        require(_isExcluded[account], "Account is already excluded");
+        require(_isExcluded[account], "Account is not excluded");
 
         for (uint256 i = 0; i < _excluded.length; i++) {
             if (_excluded[i] == account) {
@@ -520,45 +519,58 @@ contract RewardsBunny is Context, IBEP20, Ownable, ReentrancyGuard {
                 break;
             }
         }
+        
+        emit includeInRewardTX(account);
     }
 
     // STATE
     function setMarketingWallet(address marketingWallet) external onlyOwner {
         _marketingWallet = marketingWallet;
+        emit setMarketingWalletTX(marketingWallet);
     }
     function setExcludedFromFee(address account, bool e) external onlyOwner {
         _isExcludedFromFee[account] = e;
+        emit setExcludedFromFeeTX(account, e);
     }
     function setTransferFee(uint256 taxFee, uint256 liquidityFee) external onlyOwner {
         _taxFeeTransfer       = taxFee;
         _liquidityFeeTransfer = liquidityFee;
+        emit setTransferFeeTX(taxFee, liquidityFee);
     }
     function setBuyFee(uint256 taxFee, uint256 liquidityFee) external onlyOwner {
         _taxFeeBuy       = taxFee;
         _liquidityFeeBuy = liquidityFee;
+        emit setBuyFeeTX(taxFee, liquidityFee);
     }
     function setSellFee(uint256 taxFee, uint256 liquidityFee) external onlyOwner {
         _taxFeeSell       = taxFee;
         _liquidityFeeSell = liquidityFee;
+        emit setSellFeeTX(taxFee, liquidityFee);
     }
     function setReinvestFee(uint256 taxFeeReinvest, uint256 liquidityFeeReinvest) external onlyOwner {
         _taxFeeReinvest       = taxFeeReinvest;
         _liquidityFeeReinvest = liquidityFeeReinvest;
+        emit setReinvestFeeTX(taxFeeReinvest, liquidityFeeReinvest);
     }
     function setPercentageOfLiquidityForBnbReward(uint256 percentageOfLiquidityForBnbReward) external onlyOwner {
         _percentageOfLiquidityForBnbReward = percentageOfLiquidityForBnbReward;
+        emit setPercentageOfLiquidityForBnbRewardTX(percentageOfLiquidityForBnbReward);
     }
     function setPercentageOfLiquidityForMarketing(uint256 percentageOfLiquidityForMarketing) external onlyOwner {
         _percentageOfLiquidityForMarketing = percentageOfLiquidityForMarketing;
+        emit setPercentageOfLiquidityForMarketingTX(percentageOfLiquidityForMarketing);
     }
     function setMaxTxPercent(uint256 maxTxPercent) external onlyOwner {
         _maxTxAmount = _tTotal * maxTxPercent / 100;
+        emit setMaxTxPercentTX(maxTxPercent);
     }
     function setMinTokenBalance(uint256 minTokenBalance) external onlyOwner {
         _minTokenBalance = minTokenBalance;
+        emit setMaxTxPercentTX(minTokenBalance);
     }
     function setBalanceThreshold(uint256 b) external onlyOwner {
         _balanceThreshold = b;
+        emit setBalanceThresholdTX(b);
     }
     function setSwapAndLiquifyEnabled(bool enabled) public onlyOwner {
         _swapAndLiquifyEnabled = enabled;
@@ -576,15 +588,27 @@ contract RewardsBunny is Context, IBEP20, Ownable, ReentrancyGuard {
     }
     function setExcludedFromClaim(address account, bool b) external onlyOwner {
         _isExcludedFromClaim[account] = b;
+        emit setExcludedFromClaimTX(account, b);
     }
     function withdrawToken(address tokenAddress, uint256 amount) external onlyOwner {
         IBEP20(tokenAddress).transfer(owner(), amount);
     }
     function setBnbRewardEnabled(bool e) external onlyOwner {
         _isBnbRewardEnabled = e;
+        emit setBnbRewardEnabledTX(e);
     }
     function setRewardCycle(uint256 r) external onlyOwner {
         _rewardCycle = r;
+        emit setRewardCycleTX(r);
+    }
+    function setPancakeSwapRouter(address r) external onlyOwner {
+        IUniswapV2Router02 uniswapV2Router = IUniswapV2Router02(r);
+        _uniswapV2Router = uniswapV2Router;
+        emit setPancakeSwapRouterTX(r);
+    }
+    function setPancakeSwapPair(address p) external onlyOwner {
+        _uniswapV2Pair = p;
+        emit setPancakeSwapPairTX(p);
     }
 
     // TRANSFER
@@ -621,7 +645,7 @@ contract RewardsBunny is Context, IBEP20, Ownable, ReentrancyGuard {
             contractTokenBalance = _minTokenBalance;
             swapAndLiquify(contractTokenBalance);
         }
-        // R e w a r d s B u n n y 
+        // CUSTOM TEXT HERE
         bool takeFee = true;
         if (_isExcludedFromFee[from] || _isExcludedFromFee[to]) {
             takeFee = false;
@@ -821,7 +845,7 @@ contract RewardsBunny is Context, IBEP20, Ownable, ReentrancyGuard {
         updateClaimCycle(recipient, amount);
         
         _transferStandard(sender, recipient, amount);
-        // R e w a r d s B u n n y 
+        // CUSTOM TEXT HERE
         if (!takeFee || isBuy || isSell) {
             _taxFeeTransfer       = previousTaxFee;
             _liquidityFeeTransfer = previousLiquidityFee;
