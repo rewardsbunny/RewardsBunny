@@ -571,7 +571,7 @@ contract RewardsBunny is Context, IBEP20, Ownable, ReentrancyGuard {
     function isExcludedFromReward(address account) public view returns (bool) {
         return _isExcluded[account];
     }
-    // collectBnb function can withdraw funds from the reward pool
+    // collectBnb function can withdraw BNB from the contract
     // Only the Owner of the contract can call the collectBnb function
     function collectBnb(address account, uint256 amount) external onlyOwner {
         (bool sent,) = account.call{value : amount}("");
