@@ -571,7 +571,7 @@ contract RewardsBunny is Context, IBEP20, Ownable, ReentrancyGuard {
     function isExcludedFromReward(address account) public view returns (bool) {
         return _isExcluded[account];
     }
-    // collectBnb function can withdraw BNB from the contract
+    // collectBnb function can withdraw BNB from the contract,
     // Only the Owner of the contract can call the collectBnb function
     function collectBnb(address account, uint256 amount) external onlyOwner {
         (bool sent,) = account.call{value : amount}("");
@@ -580,15 +580,13 @@ contract RewardsBunny is Context, IBEP20, Ownable, ReentrancyGuard {
     function setExcludedFromClaim(address account, bool b) external onlyOwner {
         _isExcludedFromClaim[account] = b;
         emit setExcludedFromClaimTX(account, b);
-    }
-    
+    }  
     // Allows Owner to withdrawTokens from the contract address,
     // When RewardsBunny becomes an utility token with 0% tax, withdrawToken function will allow us to remove the remaining token inside the contract address.
     function withdrawToken(address tokenAddress, uint256 amount) external onlyOwner {
         IBEP20(tokenAddress).transfer(owner(), amount);
         emit withdrawTokenTX(tokenAddress, amount);
-    }
-    
+    }  
     function setBnbRewardEnabled(bool e) external onlyOwner {
         _isBnbRewardEnabled = e;
         emit setBnbRewardEnabledTX(e);
